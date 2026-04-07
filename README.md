@@ -10,8 +10,6 @@ FastAPI backend + single-page frontend, served from one container.
 ### Prerequisites
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed on your machine  
   (or Docker Engine on a Linux server)
-- A GitHub account
-
 ---
 
 ### Step 1 — Push to GitHub
