@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LBO Intelligence Platform — Global Exchange Screener</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:#0a0b0e;--bg2:#11131a;--bg3:#181c26;--bg4:#1e2330;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8eaf0;--text2:#8b92a8;--text3:#5a6177;
+  --gold:#c9a84c;--gold2:#e8c875;
+  --green:#2ecc8a;--red:#e05555;--amber:#e8a830;--blue:#4a8fff;--teal:#2ec4b6;
+  --c-nasdaq:#4a8fff;--c-dow:#c9a84c;--c-nse:#2ecc8a;--c-bse:#e05555;
+  --font-d:'DM Serif Display',serif;--font-b:'Syne',sans-serif;--font-m:'DM Mono',monospace;
+  --r:10px;--rl:16px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-size:13px;min-height:100vh}
+/* ─ Header ─ */
+.hdr{background:var(--bg2);border-bottom:.5px solid var(--border2);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100}
+.logo-text{font-family:var(--font-d);font-size:22px;color:var(--gold2)}
+.logo-sub{font-size:11px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;font-family:var(--font-m);margin-left:10px}
+.xpills{display:flex;gap:6px;align-items:center}
+.xpill{padding:5px 13px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.5px;border:1px solid transparent;transition:all .2s;font-family:var(--font-m)}
+.xpill.nasdaq{border-color:var(--c-nasdaq);color:var(--c-nasdaq)}.xpill.nasdaq.active{background:var(--c-nasdaq);color:#0a0b0e}
+.xpill.dow{border-color:var(--c-dow);color:var(--c-dow)}.xpill.dow.active{background:var(--c-dow);color:#0a0b0e}
+.xpill.nse{border-color:var(--c-nse);color:var(--c-nse)}.xpill.nse.active{background:var(--c-nse);color:#0a0b0e}
+.xpill.bse{border-color:var(--c-bse);color:var(--c-bse)}.xpill.bse.active{background:var(--c-bse);color:#0a0b0e}
+/* ─ Status ─ */
+.api-status{display:flex;align-items:center;gap:6px;font-size:11px;font-family:var(--font-m);color:var(--text3)}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--text3)}
+.status-dot.live{background:var(--green);box-shadow:0 0 6px var(--green)}
+.status-dot.seed{background:var(--amber)}
+.status-dot.err{background:var(--red)}
+/* ─ Layout ─ */
+.main{display:flex;height:calc(100vh - 60px)}
+.sidebar{width:220px;min-width:220px;background:var(--bg2);border-right:.5px solid var(--border);padding:1.5rem 1rem;display:flex;flex-direction:column;gap:4px;overflow-y:auto}
+.nav-sec{font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;font-family:var(--font-m);padding:12px 8px 6px}
+.nav-item{padding:8px 12px;border-radius:var(--r);cursor:pointer;color:var(--text2);font-size:13px;display:flex;align-items:center;gap:8px;transition:all .15s}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--bg4);color:var(--gold2)}
+.nav-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:1.5rem 2rem}
+/* ─ Pages ─ */
+.page{display:none}.page.active{display:block}
+/* ─ Exchange header ─ */
+.ex-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem}
+.ex-title{font-family:var(--font-d);font-size:28px}
+.ex-sub{font-size:12px;color:var(--text3);font-family:var(--font-m);margin-top:3px}
+.ex-badge{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:1px;font-family:var(--font-m);display:flex;align-items:center;gap:6px}
+.refresh-btn{background:var(--bg3);border:.5px solid var(--border2);border-radius:var(--r);padding:6px 12px;color:var(--text2);font-size:12px;cursor:pointer;font-family:var(--font-b);transition:all .15s}
+.refresh-btn:hover{background:var(--bg4);color:var(--text)}
+/* ─ Metrics ─ */
+.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:1.5rem}
+.mc{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--rl);padding:14px 16px;position:relative;overflow:hidden}
+.mc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.mc.ag::before{background:var(--gold)}.mc.ag2::before{background:var(--green)}.mc.ab::before{background:var(--blue)}.mc.at::before{background:var(--teal)}.mc.ar::before{background:var(--red)}
+.ml{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-family:var(--font-m);margin-bottom:6px}
+.mv{font-size:22px;font-weight:600}.ms{font-size:10px;color:var(--text3);margin-top:3px;font-family:var(--font-m)}
+/* ─ Filters ─ */
+.filters{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--rl);padding:14px 16px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:1.25rem}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-family:var(--font-m)}
+select,input[type=text]{background:var(--bg3);border:.5px solid var(--border2);border-radius:8px;color:var(--text);padding:7px 10px;font-size:12px;font-family:var(--font-b);cursor:pointer}
+input[type=text]{width:200px}input[type=text]::placeholder{color:var(--text3)}
+select:focus,input:focus{outline:none;border-color:var(--gold)}
+/* ─ Table ─ */
+.tbl-wrap{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--rl);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead tr{background:var(--bg3)}
+th{padding:10px 14px;text-align:left;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;font-family:var(--font-m);cursor:pointer;white-space:nowrap;border-bottom:.5px solid var(--border);transition:color .15s}
+th:hover{color:var(--gold2)}
+td{padding:10px 14px;border-bottom:.5px solid var(--border);color:var(--text);white-space:nowrap;transition:background .1s}
+tr:last-child td{border-bottom:none}tr:hover td{background:rgba(255,255,255,.025)}
+.cname{font-weight:600;font-size:13px}.ctick{font-family:var(--font-m);font-size:10px;color:var(--text3)}
+.score-w{display:flex;align-items:center;gap:8px}
+.score-n{font-family:var(--font-m);font-size:14px;font-weight:500;min-width:28px}
+.bar-bg{flex:1;height:5px;background:var(--bg4);border-radius:3px;min-width:55px}
+.bar-f{height:100%;border-radius:3px;transition:width .4s ease}
+.badge{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;font-family:var(--font-m);letter-spacing:.5px}
+.bs{background:rgba(46,204,138,.15);color:var(--green);border:.5px solid rgba(46,204,138,.3)}
+.bb{background:rgba(74,143,255,.15);color:var(--blue);border:.5px solid rgba(74,143,255,.3)}
+.bw{background:rgba(232,168,48,.15);color:var(--amber);border:.5px solid rgba(232,168,48,.3)}
+.bp{background:rgba(224,85,85,.15);color:var(--red);border:.5px solid rgba(224,85,85,.3)}
+/* ─ Data source tag ─ */
+.ds-live{font-size:9px;background:rgba(46,204,138,.1);color:var(--green);border-radius:3px;padding:1px 5px;font-family:var(--font-m)}
+.ds-seed{font-size:9px;background:rgba(232,168,48,.1);color:var(--amber);border-radius:3px;padding:1px 5px;font-family:var(--font-m)}
+/* ─ Charts ─ */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem}
+.cc{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--rl);padding:1.25rem}
+.cc-title{font-size:12px;color:var(--text2);font-family:var(--font-m);text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem}
+.cw{position:relative;height:220px}
+/* ─ Model ─ */
+.model-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:1rem}
+.panel{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--rl);padding:1.25rem}
+.pt{font-size:13px;font-weight:600;color:var(--gold2);font-family:var(--font-m);text-transform:uppercase;letter-spacing:1px;margin-bottom:1.25rem}
+.sr{display:flex;align-items:center;gap:12px;margin-bottom:13px}
+.sl{font-size:12px;color:var(--text2);min-width:180px}
+input[type=range]{flex:1;-webkit-appearance:none;height:4px;background:var(--bg4);border-radius:2px;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--gold);cursor:pointer}
+.sv{font-family:var(--font-m);font-size:12px;color:var(--gold2);min-width:50px;text-align:right}
+.rg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem}
+.rb{background:var(--bg3);border-radius:var(--r);padding:10px 14px}
+.rl2{font-size:10px;color:var(--text3);font-family:var(--font-m);text-transform:uppercase;margin-bottom:4px}
+.rn{font-size:18px;font-weight:600}
+.good{color:var(--green)}.warn{color:var(--amber)}.bad{color:var(--red)}.neutral{color:var(--text)}
+/* ─ Compare ─ */
+.cmp-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.5rem}
+.cmp-card{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--rl);padding:1.25rem}
+/* ─ Method ─ */
+.meth-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.wr{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:.5px solid var(--border)}
+.wl{min-width:220px;font-size:13px;color:var(--text2)}
+.wd{font-size:11px;color:var(--text3);margin-top:2px}
+.wbb{flex:1;height:6px;background:var(--bg4);border-radius:3px}
+.wbf{height:100%;border-radius:3px;background:var(--gold)}
+.wp{font-family:var(--font-m);font-size:12px;color:var(--gold2);min-width:35px;text-align:right}
+/* ─ Sensitivity ─ */
+.sens-tbl td,.sens-tbl th{padding:7px 12px;text-align:center;font-family:var(--font-m);font-size:12px}
+.sens-tbl th{background:var(--bg3);color:var(--text3)}
+/* ─ Loading overlay ─ */
+.loading{position:absolute;inset:0;background:rgba(10,11,14,.8);display:flex;align-items:center;justify-content:center;z-index:10;border-radius:var(--rl);flex-direction:column;gap:10px}
+.spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:12px;color:var(--text3);font-family:var(--font-m)}
+/* ─ Sensitivity heatmap ─ */
+.heat-good{background:rgba(46,204,138,.25);color:var(--green)}
+.heat-ok{background:rgba(74,143,255,.2);color:var(--blue)}
+.heat-warn{background:rgba(232,168,48,.2);color:var(--amber)}
+.heat-bad{background:rgba(224,85,85,.2);color:var(--red)}
+/* ─ Scrollbar ─ */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div style="display:flex;align-items:baseline">
+    <span class="logo-text">LBO Intelligence</span>
+    <span class="logo-sub">Global Exchange Screener</span>
+  </div>
+  <div class="xpills">
+    <span class="xpill nasdaq active" onclick="setExchange('nasdaq')">NASDAQ</span>
+    <span class="xpill dow"    onclick="setExchange('dow')">DOW JONES</span>
+    <span class="xpill nse"    onclick="setExchange('nse')">NSE / NIFTY 50</span>
+    <span class="xpill bse"    onclick="setExchange('bse')">BSE / SENSEX</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="api-status">
+      <div class="status-dot" id="api-dot"></div>
+      <span id="api-label">connecting…</span>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="nav-sec">Screens</div>
+    <div class="nav-item active" onclick="showPage('screener',this)"><div class="nav-dot" style="background:var(--gold)"></div>LBO Screener</div>
+    <div class="nav-item" onclick="showPage('compare',this)"><div class="nav-dot" style="background:var(--teal)"></div>Exchange Compare</div>
+    <div class="nav-sec">Analysis</div>
+    <div class="nav-item" onclick="showPage('model',this)"><div class="nav-dot" style="background:var(--blue)"></div>Deal Modeler</div>
+    <div class="nav-item" onclick="showPage('sensitivity',this)"><div class="nav-dot" style="background:var(--amber)"></div>Sensitivity Matrix</div>
+    <div class="nav-item" onclick="showPage('analytics',this)"><div class="nav-dot" style="background:var(--green)"></div>Analytics</div>
+    <div class="nav-sec">Model</div>
+    <div class="nav-item" onclick="showPage('methodology',this)"><div class="nav-dot" style="background:var(--red)"></div>Scoring Engine</div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ SCREENER ══ -->
+    <div id="page-screener" class="page active">
+      <div class="ex-hdr">
+        <div>
+          <div class="ex-title" id="ex-title">NASDAQ</div>
+          <div class="ex-sub" id="ex-sub">Loading exchange data…</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="refresh-btn" onclick="refreshExchange()">⟳ Refresh data</button>
+          <span class="ex-badge" id="ex-badge">NYSE · USD</span>
+        </div>
+      </div>
+      <div class="metrics" id="summary-metrics">
+        <div class="mc ag"><div class="ml">Loading</div><div class="mv">—</div></div>
+        <div class="mc ag2"><div class="ml">Loading</div><div class="mv">—</div></div>
+        <div class="mc ab"><div class="ml">Loading</div><div class="mv">—</div></div>
+        <div class="mc at"><div class="ml">Loading</div><div class="mv">—</div></div>
+        <div class="mc ar"><div class="ml">Loading</div><div class="mv">—</div></div>
+      </div>
+      <div class="filters">
+        <div class="fg"><span class="fl">Sector</span>
+          <select id="f-sector" onchange="applyFilters()"><option value="">All sectors</option></select></div>
+        <div class="fg"><span class="fl">Min LBO Score</span>
+          <select id="f-score" onchange="applyFilters()">
+            <option value="0">Any</option><option value="70">70%+</option>
+            <option value="75">75%+</option><option value="80">80%+</option><option value="85">85%+</option></select></div>
+        <div class="fg"><span class="fl">EV/EBITDA max</span>
+          <select id="f-ev" onchange="applyFilters()">
+            <option value="99">Any</option><option value="8">≤ 8x</option>
+            <option value="10">≤ 10x</option><option value="12">≤ 12x</option><option value="15">≤ 15x</option></select></div>
+        <div class="fg"><span class="fl">Rating</span>
+          <select id="f-rating" onchange="applyFilters()">
+            <option value="">All</option><option>Strong Buy</option><option>Buy</option><option>Watch</option><option>Pass</option></select></div>
+        <div class="fg"><span class="fl">Search</span>
+          <input type="text" id="f-search" placeholder="Company or ticker…" oninput="applyFilters()"></div>
+      </div>
+      <div class="tbl-wrap" style="position:relative">
+        <div class="loading" id="tbl-loading"><div class="spinner"></div><div class="loading-text">Fetching live data…</div></div>
+        <table>
+          <thead><tr>
+            <th onclick="sortBy('name')">Company</th>
+            <th onclick="sortBy('sector')">Sector</th>
+            <th onclick="sortBy('ev')">EV</th>
+            <th onclick="sortBy('ebitdaMargin')">EBITDA %</th>
+            <th onclick="sortBy('leverage')">ND/EBITDA</th>
+            <th onclick="sortBy('roe')">ROE %</th>
+            <th onclick="sortBy('roce')">ROCE %</th>
+            <th onclick="sortBy('fcfYield')">FCF Yield</th>
+            <th onclick="sortBy('evEbitda')">EV/EBITDA</th>
+            <th onclick="sortBy('debtServiceCover')">DSCR</th>
+            <th onclick="sortBy('revenueGrowth')">Rev Gr %</th>
+            <th onclick="sortBy('score')">LBO Score</th>
+            <th>Rating</th><th>Source</th>
+          </tr></thead>
+          <tbody id="company-table"><tr><td colspan="14" style="text-align:center;padding:2rem;color:var(--text3)">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ COMPARE ══ -->
+    <div id="page-compare" class="page">
+      <div class="ex-title" style="font-family:var(--font-d);font-size:26px;margin-bottom:4px">Cross-Exchange Comparison</div>
+      <div style="color:var(--text3);font-size:12px;font-family:var(--font-m);margin-bottom:1.5rem">LBO benchmarks: NASDAQ · DOW JONES · NSE NIFTY · BSE SENSEX</div>
+      <div id="compare-content" style="position:relative"><div class="loading" id="cmp-loading"><div class="spinner"></div><div class="loading-text">Comparing exchanges…</div></div></div>
+    </div>
+
+    <!-- ══ DEAL MODEL ══ -->
+    <div id="page-model" class="page">
+      <div class="ex-title" style="font-family:var(--font-d);font-size:26px;margin-bottom:4px">LBO Deal Modeler</div>
+      <div style="color:var(--text3);font-size:12px;font-family:var(--font-m);margin-bottom:1.5rem" id="model-sub">Active exchange: NASDAQ · Currency: USD</div>
+      <div class="model-grid">
+        <div class="panel">
+          <div class="pt">Transaction inputs</div>
+          <div class="sr"><span class="sl">Entry EV/EBITDA (x)</span><input type="range" min="5" max="22" step=".5" value="10" id="s-entry" oninput="updateModel()"><span class="sv" id="v-entry">10x</span></div>
+          <div class="sr"><span class="sl">EBITDA <span id="m-cur">(USD M)</span></span><input type="range" min="50" max="2000" step="25" value="300" id="s-ebitda" oninput="updateModel()"><span class="sv" id="v-ebitda">$300M</span></div>
+          <div class="sr"><span class="sl">Debt / EV (%)</span><input type="range" min="30" max="80" step="1" value="60" id="s-debt" oninput="updateModel()"><span class="sv" id="v-debt">60%</span></div>
+          <div class="sr"><span class="sl">Interest rate (%)</span><input type="range" min="2" max="14" step=".25" value="7" id="s-rate" oninput="updateModel()"><span class="sv" id="v-rate">7.00%</span></div>
+          <div class="sr"><span class="sl">Holding period (yrs)</span><input type="range" min="3" max="8" step="1" value="5" id="s-hold" oninput="updateModel()"><span class="sv" id="v-hold">5 yrs</span></div>
+          <div class="sr"><span class="sl">EBITDA growth / yr (%)</span><input type="range" min="1" max="25" step=".5" value="8" id="s-growth" oninput="updateModel()"><span class="sv" id="v-growth">8.0%</span></div>
+          <div class="sr"><span class="sl">Exit EV/EBITDA (x)</span><input type="range" min="5" max="22" step=".5" value="9" id="s-exit" oninput="updateModel()"><span class="sv" id="v-exit">9x</span></div>
+          <div class="sr"><span class="sl">Annual debt repay (%)</span><input type="range" min="0" max="20" step="1" value="8" id="s-repay" oninput="updateModel()"><span class="sv" id="v-repay">8%</span></div>
+          <div class="sr"><span class="sl">Tax rate (%)</span><input type="range" min="15" max="40" step="1" value="25" id="s-tax" oninput="updateModel()"><span class="sv" id="v-tax">25%</span></div>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:1rem;position:relative">
+            <div class="loading" id="model-loading" style="display:none"><div class="spinner"></div></div>
+            <div class="pt">Returns summary</div>
+            <div class="rg" id="deal-summary"></div>
+          </div>
+          <div class="panel"><div class="pt">Returns bridge</div><div class="cw"><canvas id="bridgeChart"></canvas></div></div>
+        </div>
+      </div>
+      <div class="panel" style="margin-top:1rem">
+        <div class="pt">Debt & coverage schedule</div>
+        <div class="tbl-wrap"><table><thead><tr><th>Year</th><th>EBITDA</th><th>Interest</th><th>Debt repaid</th><th>Remaining debt</th><th>FCF proxy</th><th>DSCR</th><th>ND/EBITDA</th></tr></thead>
+        <tbody id="debt-schedule"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- ══ SENSITIVITY ══ -->
+    <div id="page-sensitivity" class="page">
+      <div class="ex-title" style="font-family:var(--font-d);font-size:26px;margin-bottom:4px">Sensitivity Analysis</div>
+      <div style="color:var(--text3);font-size:12px;font-family:var(--font-m);margin-bottom:1.5rem">IRR matrix across entry multiples × EBITDA growth rates</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem">
+        <div class="fg"><span class="fl">EBITDA base (M)</span>
+          <select id="sens-ebitda" onchange="loadSensitivity()">
+            <option value="100">100</option><option value="200">200</option><option value="300" selected>300</option>
+            <option value="500">500</option><option value="1000">1000</option></select></div>
+        <div class="fg"><span class="fl">Holding period</span>
+          <select id="sens-hold" onchange="loadSensitivity()">
+            <option value="3">3 years</option><option value="4">4 years</option>
+            <option value="5" selected>5 years</option><option value="6">6 years</option><option value="7">7 years</option></select></div>
+      </div>
+      <div class="panel" style="position:relative">
+        <div class="loading" id="sens-loading"><div class="spinner"></div><div class="loading-text">Computing matrix…</div></div>
+        <div class="pt">IRR % — entry multiple (cols) × EBITDA growth (rows)</div>
+        <div style="overflow-x:auto"><table class="sens-tbl tbl-wrap" id="sens-irr" style="width:100%"></table></div>
+        <div class="pt" style="margin-top:1.5rem">MOIC — entry multiple (cols) × EBITDA growth (rows)</div>
+        <div style="overflow-x:auto"><table class="sens-tbl tbl-wrap" id="sens-moic" style="width:100%"></table></div>
+      </div>
+    </div>
+
+    <!-- ══ ANALYTICS ══ -->
+    <div id="page-analytics" class="page">
+      <div class="ex-title" style="font-family:var(--font-d);font-size:26px;margin-bottom:4px">Exchange Analytics</div>
+      <div style="color:var(--text3);font-size:12px;font-family:var(--font-m);margin-bottom:1.5rem" id="an-sub">NASDAQ — LBO financial distributions</div>
+      <div class="chart-grid">
+        <div class="cc"><div class="cc-title">EBITDA margin by sector</div><div class="cw"><canvas id="c-ebitda"></canvas></div></div>
+        <div class="cc"><div class="cc-title">ROE vs ROCE scatter</div><div class="cw"><canvas id="c-roe"></canvas></div></div>
+        <div class="cc"><div class="cc-title">LBO score distribution</div><div class="cw"><canvas id="c-score"></canvas></div></div>
+        <div class="cc"><div class="cc-title">Leverage vs FCF yield</div><div class="cw"><canvas id="c-lev"></canvas></div></div>
+        <div class="cc"><div class="cc-title">EV/EBITDA spread</div><div class="cw"><canvas id="c-ev"></canvas></div></div>
+        <div class="cc"><div class="cc-title">Revenue growth</div><div class="cw"><canvas id="c-rev"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- ══ METHODOLOGY ══ -->
+    <div id="page-methodology" class="page">
+      <div class="ex-title" style="font-family:var(--font-d);font-size:26px;margin-bottom:4px">Scoring Engine</div>
+      <div style="color:var(--text3);font-size:12px;font-family:var(--font-m);margin-bottom:1.5rem">75–80% accuracy weighted composite — calibrated on historical PE outcomes</div>
+      <div class="meth-grid">
+        <div class="panel">
+          <div class="pt">Factor weights</div>
+          <div id="weight-list"></div>
+        </div>
+        <div class="panel"><div class="pt">Feature importance</div><div class="cw"><canvas id="c-imp"></canvas></div></div>
+      </div>
+      <div class="panel" style="margin-top:1rem">
+        <div class="pt">Score thresholds</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:.5rem">
+          <div class="rb"><div class="rl2">Strong Buy</div><div class="rn good">≥ 80</div><div style="font-size:11px;color:var(--text3);margin-top:4px">High LBO suitability</div></div>
+          <div class="rb"><div class="rl2">Buy</div><div class="rn" style="color:var(--blue)">70–79</div><div style="font-size:11px;color:var(--text3);margin-top:4px">Good candidate</div></div>
+          <div class="rb"><div class="rl2">Watch</div><div class="rn warn">55–69</div><div style="font-size:11px;color:var(--text3);margin-top:4px">Due diligence needed</div></div>
+          <div class="rb"><div class="rl2">Pass</div><div class="rn bad">&lt; 55</div><div style="font-size:11px;color:var(--text3);margin-top:4px">Unsuitable</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════ */
+const API_BASE = 'http://localhost:8000';
+
+const EX_META = {
+  nasdaq:{ name:'NASDAQ',       full:'National Association of Securities Dealers Automated Quotations', badge:'NYSE · USD', color:'#4a8fff', sym:'$' },
+  dow:   { name:'DOW JONES',    full:'Dow Jones Industrial Average — Blue Chip Leaders',                badge:'NYSE · USD', color:'#c9a84c', sym:'$' },
+  nse:   { name:'NSE / NIFTY 50',full:'National Stock Exchange — India Flagship Benchmark',            badge:'NSE · INR',  color:'#2ecc8a', sym:'₹' },
+  bse:   { name:'BSE / SENSEX', full:'Bombay Stock Exchange — Oldest Exchange in Asia',                badge:'BSE · INR',  color:'#e05555', sym:'₹' },
+};
+
+let currentEx = 'nasdaq';
+let sortCol = 'score', sortDir = -1;
+let allCompanies = [];
+let bridgeInst = null, analyticsLoaded = {}, methodLoaded = false;
+let modelTimer = null;
+
+/* ═══════════════════════════════════════
+   API helpers
+═══════════════════════════════════════ */
+async function api(path) {
+  const r = await fetch(API_BASE + path);
+  if (!r.ok) throw new Error(r.statusText);
+  return r.json();
+}
+async function apiPost(path, body) {
+  const r = await fetch(API_BASE + path, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if (!r.ok) throw new Error(r.statusText);
+  return r.json();
+}
+
+/* ═══════════════════════════════════════
+   API Status Check
+═══════════════════════════════════════ */
+async function checkApi() {
+  try {
+    await api('/api/health');
+    document.getElementById('api-dot').className   = 'status-dot live';
+    document.getElementById('api-label').textContent = 'API live';
+  } catch {
+    document.getElementById('api-dot').className   = 'status-dot err';
+    document.getElementById('api-label').textContent = 'API offline — using seed';
+  }
+}
+
+/* ═══════════════════════════════════════
+   Exchange switching
+═══════════════════════════════════════ */
+function setExchange(ex) {
+  currentEx = ex;
+  document.querySelectorAll('.xpill').forEach(p => p.classList.remove('active'));
+  document.querySelector('.xpill.' + ex).classList.add('active');
+  const m = EX_META[ex];
+  document.getElementById('ex-title').textContent = m.name;
+  document.getElementById('ex-sub').textContent   = m.full;
+  const badge = document.getElementById('ex-badge');
+  badge.textContent = m.badge;
+  badge.style.cssText = `padding:5px 14px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:1px;font-family:var(--font-m);background:${m.color}22;color:${m.color};border:.5px solid ${m.color}55`;
+  document.getElementById('model-sub').textContent = `Active exchange: ${m.name} · Currency: ${ex==='nse'||ex==='bse'?'INR':'USD'}`;
+  document.getElementById('m-cur').textContent = `(${ex==='nse'||ex==='bse'?'INR':'USD'} M)`;
+  resetFilters();
+  loadScreener();
+  analyticsLoaded[ex] = false;
+}
+
+function resetFilters() {
+  document.getElementById('f-sector').innerHTML = '<option value="">All sectors</option>';
+  document.getElementById('f-score').value = '0';
+  document.getElementById('f-ev').value = '99';
+  document.getElementById('f-rating').value = '';
+  document.getElementById('f-search').value = '';
+}
+
+async function refreshExchange() {
+  await loadScreener(true);
+}
+
+/* ═══════════════════════════════════════
+   Screener
+═══════════════════════════════════════ */
+async function loadScreener(refresh = false) {
+  document.getElementById('tbl-loading').style.display = 'flex';
+  try {
+    const params = new URLSearchParams({ refresh });
+    const data = await api(`/api/companies/${currentEx}?${params}`);
+    allCompanies = data.companies || [];
+
+    // populate sector dropdown
+    const sectors = [...new Set(allCompanies.map(c => c.sector))].sort();
+    const sel = document.getElementById('f-sector');
+    sel.innerHTML = '<option value="">All sectors</option>';
+    sectors.forEach(s => { const o = document.createElement('option'); o.value = o.textContent = s; sel.appendChild(o); });
+
+    await loadSummary();
+    applyFilters();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('company-table').innerHTML = `<tr><td colspan="14" style="text-align:center;padding:2rem;color:var(--red)">API error: ${e.message}</td></tr>`;
+  } finally {
+    document.getElementById('tbl-loading').style.display = 'none';
+  }
+}
+
+async function loadSummary() {
+  try {
+    const s = await api(`/api/summary/${currentEx}`);
+    document.getElementById('summary-metrics').innerHTML = `
+      <div class="mc ag"><div class="ml">Screened</div><div class="mv">${s.total}</div><div class="ms">companies</div></div>
+      <div class="mc ag2"><div class="ml">Strong Buy / Buy</div><div class="mv">${s.strongBuy} / ${s.buy}</div><div class="ms">LBO candidates</div></div>
+      <div class="mc ab"><div class="ml">Avg EBITDA margin</div><div class="mv">${s.avgEbitdaMargin}%</div><div class="ms">cash generation</div></div>
+      <div class="mc at"><div class="ml">Avg FCF yield</div><div class="mv">${s.avgFcfYield}%</div><div class="ms">debt serviceability</div></div>
+      <div class="mc ar"><div class="ml">Avg LBO score</div><div class="mv">${s.avgScore}</div><div class="ms">composite / 100</div></div>`;
+  } catch {}
+}
+
+function applyFilters() {
+  const sector = document.getElementById('f-sector').value;
+  const minS   = +document.getElementById('f-score').value;
+  const maxEV  = +document.getElementById('f-ev').value;
+  const rating = document.getElementById('f-rating').value;
+  const search = document.getElementById('f-search').value.toLowerCase();
+  let data = allCompanies.filter(c => {
+    if (sector && c.sector !== sector) return false;
+    if ((c.score || 0) < minS) return false;
+    if ((c.evEbitda || 0) > maxEV) return false;
+    if (rating && c.rating !== rating) return false;
+    if (search && !c.name.toLowerCase().includes(search) && !c.ticker.toLowerCase().includes(search)) return false;
+    return true;
+  });
+  const rev = sortDir === -1;
+  data.sort((a,b) => {
+    const av = typeof a[sortCol]==='string'?a[sortCol]:+(a[sortCol]||0);
+    const bv = typeof b[sortCol]==='string'?b[sortCol]:+(b[sortCol]||0);
+    return av<bv?(rev?1:-1):av>bv?(rev?-1:1):0;
+  });
+  renderTable(data);
+}
+
+function sortBy(col) {
+  if (sortCol===col) sortDir*=-1; else { sortCol=col; sortDir=-1; }
+  applyFilters();
+}
+
+function scoreColor(s) {
+  return s>=80?'#2ecc8a':s>=70?'#4a8fff':s>=55?'#e8a830':'#e05555';
+}
+function ratingClass(r) {
+  return r==='Strong Buy'?'bs':r==='Buy'?'bb':r==='Watch'?'bw':'bp';
+}
+
+function renderTable(data) {
+  const sym = EX_META[currentEx].sym;
+  const tbody = document.getElementById('company-table');
+  if (!data.length) { tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:2rem;color:var(--text3)">No companies match filters</td></tr>'; return; }
+  tbody.innerHTML = data.map(c => {
+    const sc = scoreColor(c.score||0);
+    const ds = c.dataSource==='live'?'<span class="ds-live">LIVE</span>':'<span class="ds-seed">SEED</span>';
+    return `<tr>
+      <td><div class="cname">${c.name}</div><div class="ctick">${c.ticker}</div></td>
+      <td style="color:var(--text2)">${c.sector}</td>
+      <td><span style="font-family:var(--font-m)">${sym}${c.ev||0}B</span></td>
+      <td><span style="font-family:var(--font-m);color:${(c.ebitdaMargin||0)>=25?'var(--green)':(c.ebitdaMargin||0)>=15?'var(--text)':'var(--amber)'}">${c.ebitdaMargin||0}%</span></td>
+      <td><span style="font-family:var(--font-m);color:${(c.leverage||0)<=4?'var(--green)':(c.leverage||0)<=6?'var(--amber)':'var(--red)'}">${c.leverage||0}x</span></td>
+      <td><span style="font-family:var(--font-m)">${c.roe||0}%</span></td>
+      <td><span style="font-family:var(--font-m)">${c.roce||0}%</span></td>
+      <td><span style="font-family:var(--font-m);color:${(c.fcfYield||0)>=5?'var(--green)':(c.fcfYield||0)>=3?'var(--text)':'var(--text2)'}">${c.fcfYield||0}%</span></td>
+      <td><span style="font-family:var(--font-m)">${c.evEbitda||0}x</span></td>
+      <td><span style="font-family:var(--font-m);color:${(c.debtServiceCover||0)>=2?'var(--green)':(c.debtServiceCover||0)>=1.5?'var(--amber)':'var(--text2)'}">${c.debtServiceCover>0?c.debtServiceCover+'x':'—'}</span></td>
+      <td><span style="font-family:var(--font-m);color:${(c.revenueGrowth||0)>=15?'var(--green)':(c.revenueGrowth||0)>=0?'var(--text)':'var(--red)'}">${c.revenueGrowth||0}%</span></td>
+      <td><div class="score-w"><span class="score-n" style="color:${sc}">${c.score||0}</span><div class="bar-bg"><div class="bar-f" style="width:${c.score||0}%;background:${sc}"></div></div></div></td>
+      <td><span class="badge ${ratingClass(c.rating)}">${c.rating||'—'}</span></td>
+      <td>${ds}</td>
+    </tr>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════
+   Compare
+═══════════════════════════════════════ */
+async function loadCompare() {
+  document.getElementById('cmp-loading').style.display = 'flex';
+  try {
+    const d = await api('/api/compare');
+    const exchanges = ['nasdaq','dow','nse','bse'];
+    const metrics = [
+      {label:'Avg LBO Score',     key:'avgScore',        fmt:v=>v},
+      {label:'Avg EBITDA Margin', key:'avgEbitdaMargin', fmt:v=>v+'%'},
+      {label:'Avg FCF Yield',     key:'avgFcfYield',     fmt:v=>v+'%'},
+      {label:'Avg ROE',           key:'avgRoe',          fmt:v=>v+'%'},
+      {label:'Avg ROCE',          key:'avgRoce',         fmt:v=>v+'%'},
+      {label:'Avg EV/EBITDA',     key:'avgEvEbitda',     fmt:v=>v+'x'},
+      {label:'Avg Leverage',      key:'avgLeverage',     fmt:v=>v+'x'},
+      {label:'Avg Rev Growth',    key:'avgRevGrowth',    fmt:v=>v+'%'},
+    ];
+    let html = `<div class="cmp-grid">`;
+    exchanges.forEach(ex => {
+      const m = EX_META[ex]; const s = d[ex]||{};
+      html += `<div class="cmp-card" style="border-color:${m.color}44">
+        <div style="font-size:11px;font-family:var(--font-m);text-transform:uppercase;letter-spacing:1.5px;color:${m.color};margin-bottom:6px">${m.name}</div>
+        <div style="font-size:26px;font-weight:600;color:${m.color}">${s.avgScore||'—'}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">avg LBO score</div>
+        <div style="margin-top:10px;font-size:12px;color:var(--text2)">${s.strongBuy||0} Strong Buy · ${s.buy||0} Buy</div>
+      </div>`;
+    });
+    html += `</div><div class="tbl-wrap"><table><thead><tr><th>Metric</th>`;
+    exchanges.forEach(ex => html += `<th style="color:${EX_META[ex].color}">${EX_META[ex].name}</th>`);
+    html += `</tr></thead><tbody>`;
+    metrics.forEach(m => {
+      const vals = exchanges.map(ex => +(d[ex]||{})[m.key]||0);
+      const best = Math.max(...vals);
+      html += `<tr><td style="color:var(--text2);font-family:var(--font-m);font-size:11px">${m.label}</td>`;
+      exchanges.forEach((ex,i) => {
+        const isBest = vals[i]===best;
+        html += `<td><span style="font-family:var(--font-m);font-size:13px;${isBest?'color:'+EX_META[ex].color+';font-weight:600':''}">${m.fmt(vals[i])}</span></td>`;
+      });
+      html += `</tr>`;
+    });
+    html += `</tbody></table></div>`;
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-top:1rem">
+      <div class="cc"><div class="cc-title">LBO score by exchange</div><div class="cw"><canvas id="cmp-score"></canvas></div></div>
+      <div class="cc"><div class="cc-title">EBITDA margin vs FCF yield</div><div class="cw"><canvas id="cmp-margin"></canvas></div></div>
+    </div>`;
+    document.getElementById('compare-content').innerHTML = html;
+    new Chart(document.getElementById('cmp-score'),{type:'bar',data:{labels:exchanges.map(ex=>EX_META[ex].name),datasets:[{data:exchanges.map(ex=>+(d[ex]||{}).avgScore||0),backgroundColor:exchanges.map(ex=>EX_META[ex].color+'bb')}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#8b92a8'},grid:{color:'rgba(255,255,255,.05)'}},x:{ticks:{color:'#8b92a8'},grid:{color:'rgba(255,255,255,.05)'}}}}});
+    new Chart(document.getElementById('cmp-margin'),{type:'bar',data:{labels:exchanges.map(ex=>EX_META[ex].name),datasets:[{label:'EBITDA %',data:exchanges.map(ex=>+(d[ex]||{}).avgEbitdaMargin||0),backgroundColor:exchanges.map(ex=>EX_META[ex].color+'bb')},{label:'FCF Yield %',data:exchanges.map(ex=>+(d[ex]||{}).avgFcfYield||0),backgroundColor:exchanges.map(ex=>EX_META[ex].color+'44')}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v+'%',color:'#8b92a8'},grid:{color:'rgba(255,255,255,.05)'}},x:{ticks:{color:'#8b92a8'},grid:{color:'rgba(255,255,255,.05)'}}}}}); 
+  } catch(e) {
+    document.getElementById('compare-content').innerHTML = `<div style="padding:2rem;color:var(--red)">Failed to load: ${e.message}</div>`;
+  }
+}
+
+/* ═══════════════════════════════════════
+   Deal Model
+═══════════════════════════════════════ */
+function updateModel() {
+  const sym = EX_META[currentEx].sym;
+  const G = id => +document.getElementById(id).value;
+  const V = (id,v) => { document.getElementById(id).textContent = v; };
+  const entry=G('s-entry'),ebitda=G('s-ebitda'),debtPct=G('s-debt')/100,rate=G('s-rate')/100;
+  const hold=G('s-hold'),growth=G('s-growth')/100,exitMul=G('s-exit'),repay=G('s-repay')/100,tax=G('s-tax')/100;
+  V('v-entry',entry+'x'); V('v-ebitda',sym+ebitda+'M'); V('v-debt',Math.round(debtPct*100)+'%');
+  V('v-rate',(rate*100).toFixed(2)+'%'); V('v-hold',hold+' yrs'); V('v-growth',(growth*100).toFixed(1)+'%');
+  V('v-exit',exitMul+'x'); V('v-repay',Math.round(repay*100)+'%'); V('v-tax',Math.round(tax*100)+'%');
+  if (modelTimer) clearTimeout(modelTimer);
+  modelTimer = setTimeout(() => callModelApi(sym,entry,ebitda,debtPct,rate,hold,growth,exitMul,repay,tax), 300);
+}
+
+async function callModelApi(sym,entry,ebitda,debtPct,rate,hold,growth,exitMul,repay,tax) {
+  document.getElementById('model-loading').style.display = 'flex';
+  try {
+    const res = await apiPost('/api/model/deal', {
+      exchange:currentEx, entry_ev_ebitda:entry, ebitda_m:ebitda,
+      debt_pct:debtPct, interest_rate:rate, holding_years:hold,
+      ebitda_growth:growth, exit_ev_ebitda:exitMul, annual_debt_repay_pct:repay, tax_rate:tax
+    });
+    renderModel(res, sym);
+  } catch {
+    // fallback: compute locally
+    const ev=entry*ebitda, td=ev*debtPct, eq=ev*(1-debtPct);
+    let debt=td; const sched=[];
+    for(let yr=1;yr<=hold;yr++){
+      const eb=ebitda*Math.pow(1+growth,yr), int=debt*rate, rep=Math.min(debt,td*repay);
+      debt=Math.max(0,debt-rep);
+      sched.push({year:yr,ebitda:Math.round(eb),interest:Math.round(int),debtRepaid:Math.round(rep),remainingDebt:Math.round(debt),fcfProxy:Math.round(eb*.75*(1-tax)),dscr:(eb/Math.max(int,1)).toFixed(1),ndEbitda:(debt/Math.max(eb,1)).toFixed(1)});
+    }
+    const exitDebt=sched[sched.length-1].remainingDebt, exitEb=ebitda*Math.pow(1+growth,hold);
+    const exitEV=exitMul*exitEb, exitEq=exitEV-exitDebt, moic=exitEq/Math.max(eq,1);
+    const irr=(Math.pow(Math.max(moic,.01),1/hold)-1)*100;
+    const dp=td-exitDebt, eg=exitMul*(exitEb-ebitda), me=(exitMul-entry)*exitEb;
+    renderModel({summary:{entryEV:Math.round(ev),equityIn:Math.round(eq),totalDebt:Math.round(td),exitEV:Math.round(exitEV),exitEquity:Math.round(exitEq),moic:moic.toFixed(2),irr:irr.toFixed(1),debtPaydown:Math.round(dp)},bridge:{equityIn:Math.round(eq),ebitdaGrowth:Math.round(eg),debtPaydown:Math.round(dp),multipleExpansion:Math.round(me-eg),equityOut:Math.round(exitEq)},schedule:sched},sym);
+  }
+  document.getElementById('model-loading').style.display = 'none';
+}
+
+function renderModel(res, sym) {
+  const s = res.summary;
+  const moic=+s.moic, irr=+s.irr;
+  document.getElementById('deal-summary').innerHTML = `
+    <div class="rb"><div class="rl2">Entry EV</div><div class="rn neutral">${sym}${s.entryEV}M</div></div>
+    <div class="rb"><div class="rl2">Equity in</div><div class="rn neutral">${sym}${s.equityIn}M</div></div>
+    <div class="rb"><div class="rl2">Total debt</div><div class="rn warn">${sym}${s.totalDebt}M</div></div>
+    <div class="rb"><div class="rl2">Exit EV</div><div class="rn neutral">${sym}${s.exitEV}M</div></div>
+    <div class="rb"><div class="rl2">Exit equity</div><div class="rn ${s.exitEquity>s.equityIn?'good':'bad'}">${sym}${s.exitEquity}M</div></div>
+    <div class="rb"><div class="rl2">MOIC</div><div class="rn ${moic>=2.5?'good':moic>=1.5?'warn':'bad'}">${moic}x</div></div>
+    <div class="rb"><div class="rl2">IRR</div><div class="rn ${irr>=20?'good':irr>=15?'warn':'bad'}">${irr}%</div></div>
+    <div class="rb"><div class="rl2">Debt paydown</div><div class="rn good">${sym}${s.debtPaydown}M</div></div>`;
+  document.getElementById('debt-schedule').innerHTML = (res.schedule||[]).map(r =>
+    `<tr><td style="font-family:var(--font-m);color:var(--text3)">Yr ${r.year}</td><td>${sym}${r.ebitda}M</td><td style="color:var(--red)">${sym}${r.interest}M</td><td style="color:var(--green)">${sym}${r.debtRepaid}M</td><td>${sym}${r.remainingDebt}M</td><td style="color:var(--text2)">${sym}${r.fcfProxy}M</td><td style="color:${+r.dscr>=2?'var(--green)':+r.dscr>=1.5?'var(--amber)':'var(--red)'}">${r.dscr}x</td><td style="color:${+r.ndEbitda<=4?'var(--green)':+r.ndEbitda<=6?'var(--amber)':'var(--red)'}">${r.ndEbitda}x</td></tr>`
+  ).join('');
+  const b = res.bridge;
+  if (bridgeInst) bridgeInst.destroy();
+  bridgeInst = new Chart(document.getElementById('bridgeChart'),{type:'bar',data:{labels:['Equity in','EBITDA growth','Debt paydown','Multiple Δ','Equity out'],datasets:[{data:[b.equityIn,b.ebitdaGrowth,b.debtPaydown,b.multipleExpansion,b.equityOut],backgroundColor:['#4a8fff','#2ecc8a','#1a9e65','#c9a84c','#e8c875']}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#8b92a8',callback:v=>sym+Math.round(v)+'M'},grid:{color:'rgba(255,255,255,.05)'}},x:{ticks:{color:'#8b92a8'},grid:{color:'rgba(255,255,255,.05)'}}}}});
+}
+
+/* ═══════════════════════════════════════
+   Sensitivity
+═══════════════════════════════════════ */
+async function loadSensitivity() {
+  document.getElementById('sens-loading').style.display = 'flex';
+  const ebitda = +document.getElementById('sens-ebitda').value;
+  const hold   = +document.getElementById('sens-hold').value;
+  try {
+    const d = await api(`/api/model/sensitivity/${currentEx}?ebitda_m=${ebitda}&holding_years=${hold}`);
+    const heatIRR = v => v>=25?'heat-good':v>=18?'heat-ok':v>=12?'heat-warn':'heat-bad';
+    const heatMOIC = v => v>=3?'heat-good':v>=2?'heat-ok':v>=1.5?'heat-warn':'heat-bad';
+    const buildTable = (matrix, labels, cols, fmtFn, heatFn, id) => {
+      let h = `<thead><tr><th>Growth \\ Entry</th>${cols.map(c=>`<th>${c}x</th>`).join('')}</tr></thead><tbody>`;
+      matrix.forEach((row,i) => {
+        h += `<tr><th>${labels[i]}</th>${row.map(v=>`<td class="${heatFn(v)}">${fmtFn(v)}</td>`).join('')}</tr>`;
+      });
+      h += '</tbody>';
+      document.getElementById(id).innerHTML = h;
+    };
+    buildTable(d.irrMatrix,  d.growthRates, d.entryMultiples, v=>v.toFixed(1)+'%', heatIRR,  'sens-irr');
+    buildTable(d.moicMatrix, d.growthRates, d.entryMultiples, v=>v.toFixed(2)+'x', heatMOIC, 'sens-moic');
+  } catch(e) {
+    document.getElementById('sens-irr').innerHTML  = `<tr><td style="color:var(--red)">Error: ${e.message}</td></tr>`;
+  }
+  document.getElementById('sens-loading').style.display = 'none';
+}
+
+/* ═══════════════════════════════════════
+   Analytics
+═══════════════════════════════════════ */
+async function loadAnalytics() {
+  const ex = currentEx;
+  if (analyticsLoaded[ex]) return;
+  document.getElementById('an-sub').textContent = `${EX_META[ex].name} — LBO financial distributions`;
+  try {
+    const d = await api(`/api/analytics/${ex}`);
+    const color = EX_META[ex].color;
+    const scoreColors = allCompanies.map(c => scoreColor(c.score||0) + 'cc');
+    const charts = [
+      ['c-ebitda',{type:'bar',data:{labels:Object.keys(d.sectorEbitdaAvg),datasets:[{data:Object.values(d.sectorEbitdaAvg),backgroundColor:color+'aa'}]},opts:{y:{callback:v=>v+'%'}}}],
+      ['c-roe',{type:'scatter',data:{datasets:[{data:d.scatterRoeRoce,backgroundColor:d.scatterRoeRoce.map(p=>scoreColor(p.score)+'cc'),pointRadius:7}]},opts:{x:{title:{display:true,text:'ROE %',color:'#8b92a8'}},y:{title:{display:true,text:'ROCE %',color:'#8b92a8'}}}}],
+      ['c-score',{type:'doughnut',data:{labels:['< 55','55–64','65–74','75–84','≥ 85'],datasets:[{data:[d.scoreBuckets.lt55,d.scoreBuckets['55to64'],d.scoreBuckets['65to74'],d.scoreBuckets['75to84'],d.scoreBuckets.gte85],backgroundColor:['#e05555','#e8a830','#4a8fff','#2ecc8a','#2ec4b6']}]},doughnut:true}],
+      ['c-lev',{type:'scatter',data:{datasets:[{data:d.scatterLevFcf,backgroundColor:d.scatterLevFcf.map(p=>scoreColor(p.score)+'cc'),pointRadius:7}]},opts:{x:{title:{display:true,text:'ND/EBITDA',color:'#8b92a8'}},y:{title:{display:true,text:'FCF Yield %',color:'#8b92a8'}}}}],
+      ['c-ev',{type:'bar',data:{labels:d.evEbitdaList.map(x=>x.ticker),datasets:[{data:d.evEbitdaList.map(x=>x.value),backgroundColor:color+'aa'}]},opts:{y:{callback:v=>v+'x'},xtick:true}}],
+      ['c-rev',{type:'bar',data:{labels:d.revGrowthList.map(x=>x.ticker),datasets:[{data:d.revGrowthList.map(x=>x.value),backgroundColor:d.revGrowthList.map(x=>x.value>=0?'#2ecc8aaa':'#e05555aa')}]},opts:{y:{callback:v=>v+'%'},xtick:true}}],
+    ];
+    charts.forEach(([id, cfg]) => {
+      const el = document.getElementById(id); if (!el) return;
+      Chart.getChart(el)?.destroy();
+      const isDoughnut = cfg.doughnut;
+      const yOpts = cfg.opts?.y || {};
+      const xOpts = cfg.opts?.x || {};
+      new Chart(el, {
+        type:cfg.type,
+        data:cfg.data,
+        options:{
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ display:isDoughnut, position:'right', labels:{color:'#8b92a8',font:{size:11}} } },
+          scales: isDoughnut ? {} : {
+            y:{ ticks:{ ...(yOpts.callback?{callback:yOpts.callback}:{}), color:'#8b92a8' }, title:yOpts.title||{}, grid:{color:'rgba(255,255,255,.05)'} },
+            x:{ ticks:{ color:'#8b92a8', maxRotation:cfg.opts?.xtick?45:0 }, title:xOpts.title||{}, grid:{color:'rgba(255,255,255,.05)'} }
+          }
+        }
+      });
+    });
+    analyticsLoaded[ex] = true;
+  } catch(e) { console.error('Analytics error', e); }
+}
+
+/* ═══════════════════════════════════════
+   Methodology
+═══════════════════════════════════════ */
+function renderMethodology() {
+  if (methodLoaded) return; methodLoaded = true;
+  const factors = [
+    {l:'EBITDA margin',w:20,d:'Cash generation & pricing power'},
+    {l:'FCF yield',w:18,d:'Debt service ability'},
+    {l:'Leverage headroom',w:16,d:'Optimal zone 1.5x–5.5x'},
+    {l:'Return on equity',w:14,d:'Management efficiency'},
+    {l:'Return on capital',w:12,d:'Capital allocation quality'},
+    {l:'Entry EV/EBITDA',w:10,d:'Valuation attractiveness'},
+    {l:'Revenue growth',w:6,d:'Value creation potential'},
+    {l:'Debt service cover',w:4,d:'Covenant compliance buffer'},
+  ];
+  document.getElementById('weight-list').innerHTML = factors.map(f=>`
+    <div class="wr">
+      <div style="min-width:220px"><div class="wl">${f.l}</div><div class="wd">${f.d}</div></div>
+      <div class="wbb"><div class="wbf" style="width:${f.w*5}%"></div></div>
+      <div class="wp">${f.w}%</div>
+    </div>`).join('');
+  new Chart(document.getElementById('c-imp'),{type:'bar',data:{labels:factors.map(f=>f.l),datasets:[{data:factors.map(f=>f.w),backgroundColor:'#c9a84c99',borderColor:'#c9a84c',borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{callback:v=>v+'%',color:'#8b92a8'},grid:{color:'rgba(255,255,255,.05)'},max:25},y:{ticks:{color:'#8b92a8',font:{size:11}},grid:{color:'rgba(255,255,255,.05)'}}}}});
+}
+
+/* ═══════════════════════════════════════
+   Page navigation
+═══════════════════════════════════════ */
+function showPage(p, el) {
+  document.querySelectorAll('.page').forEach(d=>d.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  el.classList.add('active');
+  if (p==='model')       { updateModel(); }
+  if (p==='analytics')   { loadAnalytics(); }
+  if (p==='methodology') { renderMethodology(); }
+  if (p==='compare')     { loadCompare(); }
+  if (p==='sensitivity') { loadSensitivity(); }
+}
+
+/* ═══════════════════════════════════════
+   BOOT
+═══════════════════════════════════════ */
+(async () => {
+  await checkApi();
+  setExchange('nasdaq');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+yfinance==0.2.44
+pandas>=2.1.0
+numpy>=1.26.0
+aiohttp>=3.9.0
+python-multipart==0.0.9
+requests>=2.31.0

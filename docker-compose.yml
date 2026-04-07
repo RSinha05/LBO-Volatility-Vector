@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  lbo-platform:
+    build: .
+    image: lbo-platform:latest
+    container_name: lbo-platform
+    restart: unless-stopped
+    ports:
+      - "8000:8000"       # Change left side to 80 if you want http://your-ip (no port)
+    environment:
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
